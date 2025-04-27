@@ -10,7 +10,7 @@ def main ():
     parser.add_argument("-p", "--port", required=True, help="Port")
     parser.add_argument("-f", "--file", required=False, help="File")
     parser.add_argument("-w", "--window", required=False, help="Window", default=3)
-    parser.add_argument("-d", "--discard", required=False, help="Discard")
+    parser.add_argument("-d", "--discard", required=False, help="Discard", default=0)
 
     args = parser.parse_args()
 
@@ -20,12 +20,12 @@ def main ():
     port = int(args.port)
     filename = args.file
     window = int(args.window)
-    discard = args.discard
+    discard = int(args.discard)
 
     if (is_client):
         client(ip, port, filename, window)
     elif (is_server):
-        server(ip, port, window)
+        server(ip, port, window, discard)
     else:
         raise Exception("Not server or client")
     

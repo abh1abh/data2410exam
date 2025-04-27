@@ -1,8 +1,15 @@
-from drtp import *
-from socket import *
+from drtp import parse_header, make_packet, log, HEADER_LEN, DATA_LEN, FLAG_ACK, FLAG_FIN, FLAG_SYN
+from datetime import datetime
+from socket import socket, AF_INET, SOCK_DGRAM
 
-def handshake(sock, rcv_window, timeout_window=0.4, max_retry=5):
-    print('Waiting')
+
+# HEADER_LEN = drtp.HEADER_LEN
+# DATA_LEN = drtp.DATA_LEN
+# FLAG_SYN = drtp.FLAG_SYN
+# FLAG_ACK = drtp.FLAG_ACK
+# FLAG_FIN = d
+
+def handshake_server(sock, rcv_window, timeout=0.4, max_retry=5):
     while True:
         data, client_addr = sock.recvfrom(HEADER_LEN)
         if len(data) != HEADER_LEN:
@@ -19,7 +26,7 @@ def handshake(sock, rcv_window, timeout_window=0.4, max_retry=5):
         server_isn  = 1                      
         synack_pkt  = make_packet(server_isn, c_seq + 1, FLAG_SYN | FLAG_ACK, rcv_window)
 
-        sock.settimeout(timeout_window)             
+        sock.settimeout(timeout)             
         retries = 0
         while retries < max_retry:
             sock.sendto(synack_pkt, client_addr)
@@ -45,16 +52,71 @@ def handshake(sock, rcv_window, timeout_window=0.4, max_retry=5):
                 return client_addr, c_seq2, agreed_wnd
         raise RuntimeError('client did not finish handshake')
 
+def recieve(sock, client_addr, start_pkt, rcv_window, discard_seq = 0, outfile='output.bin'):
+
+    expected = start_pkt
+    to_discard = discard_seq 
+    total_bytes = 0
+    t = None  
+    
+    with open(outfile, 'wb') as out:
+        while True:
+            data, addr = sock.recvfrom(HEADER_LEN + DATA_LEN)
+            if addr != client_addr:
+                continue
+
+            seq, _, flags, _ = parse_header(data[:HEADER_LEN])
+
+            payload = data[HEADER_LEN:]
+
+            if seq == to_discard:
+                to_discard = float('inf')
+                continue
 
 
-def server(ip, port, window):
+            # Connection teardown
+            if flags & FLAG_FIN:
+                print(f"\nFIN packet is received seq={seq}")
+                fin_ack = make_packet(1, seq, FLAG_FIN | FLAG_ACK, rcv_window)
+                sock.sendto(fin_ack, client_addr)
+                print(f"FIN-ACK packet is sent seq=1 ack={seq}")
+                print("Connection closed")
+                break
+            
+
+            if seq == expected:
+                if t is None:
+                    t = datetime.now()
+                log(f"packet {seq} is received")
+                out.write(payload)
+                total_bytes += len(payload)
+                expected += 1
+                ack = seq
+
+                ack_pkt = make_packet(0, ack, FLAG_ACK, rcv_window)
+                sock.sendto(ack_pkt, client_addr)
+                log(f"sending ack for the received {ack}")
+            else:
+                log(f"out-of-order packet {seq} is received (expected {expected})")
+                continue
+        if t is not None and total_bytes:
+            duration_seconds = (datetime.now() - t).total_seconds()
+            throughput_mbps = (total_bytes * 8) / (1e6 * duration_seconds)
+            print(f"The throughput is {throughput_mbps:.2f} Mbps")
+        
+
+        
+     
+
+def server(ip, port, window, discard):
     with socket(AF_INET, SOCK_DGRAM) as sock:
         sock.bind((ip, port))
         print("Server running")
 
         while True:
             try:
-                c_addr, c_seq, window = handshake(sock, window)
+                c_addr, start_pkt, agreed_window = handshake_server(sock, window)
+                recieve(sock, c_addr, start_pkt, agreed_window, discard)
             except RuntimeError as e:
                 print('Server', e)
                 continue

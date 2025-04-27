@@ -1,5 +1,4 @@
 from socket import socket, AF_INET, SOCK_DGRAM, timeout as sock_timeout
-from struct import *
 from drtp import *
 
 def handshake_client(sock, server_addr, rcv_window, timeout=0.4, max_retry=5):
@@ -140,9 +139,7 @@ def client(ip, port, filename, window):
 
     server_addr = ((ip, port))
     sock.bind(('', 0))
-    sock.settimeout(0.4) 
-    print("Client running")
- 
+    sock.settimeout(0.4)  
     try:
         next_seq, agreed_window = handshake_client(sock, server_addr, window)
         final_seq = send_data(sock, server_addr, next_seq, agreed_window, filename)

@@ -1,13 +1,5 @@
-from drtp import parse_header, make_packet, log, HEADER_LEN, DATA_LEN, FLAG_ACK, FLAG_FIN, FLAG_SYN
-from datetime import datetime
+from drtp import *
 from socket import socket, AF_INET, SOCK_DGRAM
-
-
-# HEADER_LEN = drtp.HEADER_LEN
-# DATA_LEN = drtp.DATA_LEN
-# FLAG_SYN = drtp.FLAG_SYN
-# FLAG_ACK = drtp.FLAG_ACK
-# FLAG_FIN = d
 
 def handshake_server(sock, rcv_window, timeout=0.4, max_retry=5):
     while True:
@@ -76,17 +68,17 @@ def recieve(sock, client_addr, start_pkt, rcv_window, discard_seq = 0, outfile='
 
             # Connection teardown
             if flags & FLAG_FIN:
-                print(f"\nFIN packet is received seq={seq}")
+                print(f'\nFIN packet is received seq={seq}')
                 fin_ack = make_packet(1, seq, FLAG_FIN | FLAG_ACK, rcv_window)
                 sock.sendto(fin_ack, client_addr)
-                print(f"FIN-ACK packet is sent seq=1 ack={seq}")
+                print(f'FIN-ACK packet is sent seq=1 ack={seq}')
                 print("Connection closed")
                 break
             
 
             if seq == expected:
                 if t is None:
-                    t = datetime.now()
+                    t = timestamp()
                 log(f"packet {seq} is received")
                 out.write(payload)
                 total_bytes += len(payload)
@@ -95,24 +87,21 @@ def recieve(sock, client_addr, start_pkt, rcv_window, discard_seq = 0, outfile='
 
                 ack_pkt = make_packet(0, ack, FLAG_ACK, rcv_window)
                 sock.sendto(ack_pkt, client_addr)
-                log(f"sending ack for the received {ack}")
+                log(f'sending ack for the received {ack}')
             else:
-                log(f"out-of-order packet {seq} is received (expected {expected})")
+                log(f'out-of-order packet {seq} is received (expected {expected})')
                 continue
         if t is not None and total_bytes:
-            duration_seconds = (datetime.now() - t).total_seconds()
+            end = timestamp()
+            duration_seconds = (end - t).total_seconds()
             throughput_mbps = (total_bytes * 8) / (1e6 * duration_seconds)
-            print(f"The throughput is {throughput_mbps:.2f} Mbps")
-        
-
-        
+            print(f'The throughput is {throughput_mbps:.2f} Mbps')
+        print('Connection Closes')   
      
 
 def server(ip, port, window, discard):
     with socket(AF_INET, SOCK_DGRAM) as sock:
         sock.bind((ip, port))
-        print("Server running")
-
         while True:
             try:
                 c_addr, start_pkt, agreed_window = handshake_server(sock, window)

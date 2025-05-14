@@ -6,15 +6,15 @@ from datetime import datetime
 HEADER_FORMAT = '!HHHH'
 HEADER_LEN = 8
 DATA_LEN = 992
+# Flags
 FLAG_SYN = 0b0100
 FLAG_ACK = 0b0010
 FLAG_FIN = 0b1000
 FLAG_RST = 0b0001  
 
-
 # Pack the four 16-bit header fields into network byte order
-def build_header(seq_num: int, ack_num: int, flags: int, window: int):
-    return pack(HEADER_FORMAT, seq_num, ack_num, flags, window)
+def build_header(seq: int, ack: int, flags: int, window: int): 
+    return pack(HEADER_FORMAT, seq, ack, flags, window)
 
 # Unpack the header 
 def parse_header(header_bytes: bytes):
@@ -37,7 +37,7 @@ def parse_header(header_bytes: bytes):
     -------
     bytes : Raw datagram.
 """
-def make_packet(seq, ack, flags, window, data=b''):
+def make_packet(seq: int, ack: int, flags: int, window: int, data=b''):
     return build_header(seq, ack, flags, window) + data
 
 # Return the current local time once
@@ -45,5 +45,5 @@ def timestamp():
     return datetime.now()
 
 # Print message with a wall-clock timestamp down to microseconds.
-def log(message):
+def log(message: str):
     print(f'{timestamp().strftime("%H:%M:%S.%f")} -- {message}')

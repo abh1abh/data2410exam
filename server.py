@@ -1,5 +1,5 @@
 from drtp import *
-from socket import socket, AF_INET, SOCK_DGRAM
+from socket import socket, AF_INET, SOCK_DGRAM, timeout as sock_timeout
 
 """
     Description
@@ -43,9 +43,9 @@ def handshake_server(sock: socket, rcv_window: int=15, timeout: float=0.4, max_r
             print(f'SYN-ACK packet is sent seq')
             try:
                 data, addr = sock.recvfrom(HEADER_LEN) # Receive packet from client 
-            except: # If no packet is recieved from client we resend the SYN-ACK
+            except sock_timeout: # If no packet is recieved from client we resend the SYN-ACK
                 retries += 1
-                print('Server timeout -> resend SYN-ACK')
+                print('Server timeout: resend SYN-ACK')
                 continue # Resend SYN-ACK by doing continue
             
             # If the address from the received packet is not the client address from the first packet we try again.
@@ -61,7 +61,7 @@ def handshake_server(sock: socket, rcv_window: int=15, timeout: float=0.4, max_r
                 print('Connection established')
                 return client_addr, agreed_wnd
         # Raises an RuntimeError if we retry more than max_retry 
-        raise RuntimeError('client did not finish handshake')
+        raise RuntimeError('Client did not finish handshake')
 
 
 """
@@ -89,14 +89,15 @@ def handshake_server(sock: socket, rcv_window: int=15, timeout: float=0.4, max_r
     bool : True when the file transfer finishes successfully and the connection
         is torn down.
 """
-def receive(sock: socket, client_addr: tuple, start_pkt: int, rcv_window: int, discard_seq: int=0, outfile: str='output.bin'):
-
+def receive(sock: socket, client_addr: tuple, start_pkt: int, rcv_window: int, discard_seq: int=0, outfile: str='output.jpg'):
+    
     # Asigning different variable
     expected = start_pkt
     to_discard = discard_seq 
     total_bytes = 0
-    t = None  
     
+    t = timestamp() # Timer for throughput calculation 
+
     # Opens outfile with 'with open' to ensure that the file descriptor closes
     with open(outfile, 'wb') as out:
         while True:
@@ -112,21 +113,19 @@ def receive(sock: socket, client_addr: tuple, start_pkt: int, rcv_window: int, d
 
             # Discard logic for discarding packet 
             if seq == to_discard:
-                to_discard = float('inf')
-                continue
+                to_discard = float('inf') # set to_discard to infinite so it does not discard again
+                continue 
 
             # Connection teardown
-            if flags & FLAG_FIN: 
-                print(f'\nFIN packet is received seq={seq}')
+            if flags & FLAG_FIN: # Check if we recieved FIN flag
+                print(f'\nFIN packet is received seq={seq}') 
                 fin_ack = make_packet(1, seq, FLAG_FIN | FLAG_ACK, rcv_window) # Making FIN-ACK packet
                 sock.sendto(fin_ack, client_addr) # Sending FIN-ACK packet
                 print(f'FIN-ACK packet is sent')
                 print("Connection closed")
                 break # Break out of while loop
 
-            if seq == expected: # Checks if the seq number is the same as we expected
-                if t is None: # If we dont time we start one
-                    t = timestamp()
+            if seq == expected: # Checks if the seq number is the same as we expected                    
                 log(f"packet {seq} is received")
                 out.write(payload) # Write to outfile
                 total_bytes += packet_bytes # Counting total bytes
@@ -135,9 +134,9 @@ def receive(sock: socket, client_addr: tuple, start_pkt: int, rcv_window: int, d
 
                 ack_pkt = make_packet(0, ack, FLAG_ACK, rcv_window) # Making ACK packet
                 sock.sendto(ack_pkt, client_addr) 
-                log(f'sending ack for the received {ack}')
+                log(f'Sending ack for the received {ack}')
             else: # If seq number is not what we expected 
-                log(f'out-of-order packet {seq} is received (expected {expected})')
+                log(f'Out-of-order packet {seq} is received (expected {expected})')
                 continue # Drops packet and wait for the correct one
         # Throughput calcuation
         if t is not None and total_bytes:
@@ -169,7 +168,7 @@ def receive(sock: socket, client_addr: tuple, start_pkt: int, rcv_window: int, d
     which the server waits for a new client.
     """
 
-def server(ip, port, discard):
+def server(ip: str, port: int, discard: int):
     # Using 'with open' so that if any exceptions are raised the socket closes.
     with socket(AF_INET, SOCK_DGRAM) as sock: 
         sock.bind((ip, port)) # Binds socket to IP and port
@@ -178,7 +177,7 @@ def server(ip, port, discard):
                 start_pkt = 1 # Starting packet
                 c_addr, agreed_window = handshake_server(sock) # Handshake with client
                 if receive(sock, c_addr, start_pkt, agreed_window, discard): # Recieves file from users 
-                    #Exit after exactly one successful transfer – simplifies 
+                    # Exit after exactly one successful transfer  
                     break
             except RuntimeError as e: # Handles any runtime excpetions raised and prints the to terminal
                 print('Server', e)

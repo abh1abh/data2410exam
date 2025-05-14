@@ -21,12 +21,15 @@ def main ():
     parser.add_argument("-s", "--server", action="store_true", help="Run as server")
     parser.add_argument("-c", "--client", action="store_true", help="Run as client")
     parser.add_argument("-i", "--ip", required=True, help="IP")
-    parser.add_argument("-p", "--port", required=True, type=int, help="Port")
+    parser.add_argument("-p", "--port", required=True, type=int, help="Port", default=8080)
     parser.add_argument("-f", "--file", help="File")
     parser.add_argument("-w", "--window", type=int, help="Window", default=3)
     parser.add_argument("-d", "--discard", type=int, help="Discard", default=0)
 
     args = parser.parse_args()
+
+    if(args.port and (args.port < 1024 or args.port > 65535 )): # Checking if ports is valid 
+        raise SystemExit("Invalid port number. Must be between [1024, 65535]")
 
     if args.client:
         if args.file is None:

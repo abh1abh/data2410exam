@@ -10,20 +10,17 @@ from drtp import *
     ----------
     sock : Bound UDP socket used for the session.
     server_addr : (ip, port) tuple of the server.
-    rcv_window : Server-advertised receive window (packets).
-    timeout : Seconds to wait for the client’s ACK before retransmitting SYN-ACK.
+    rcv_window : Client-advertised receive window (packets).
     max_retry : Maximum SYN-ACK retransmissions before giving up.
 
     Returns
     -------
     window : Flow-control window agreed on.
 """
-def handshake_client(sock: socket, server_addr: tuple, rcv_window: int, timeout: float=0.4, max_retry: int=5):
+def handshake_client(sock: socket, server_addr: tuple, rcv_window: int, max_retry: int=5):
     print('Connection Establishment Phase:\n')
 
     syn_pkt = make_packet(0, 0, FLAG_SYN, 0) # Makes SYN packet 
-
-    sock.settimeout(timeout) # Sets timeout 
 
     retries = 0
     while retries < max_retry: 
@@ -49,7 +46,7 @@ def handshake_client(sock: socket, server_addr: tuple, rcv_window: int, timeout:
                 window = min(rcv_window, s_window) # Selecting the flow-controll window
                 ack_pkt = make_packet(0, 0, FLAG_ACK, window) # Making ACK packet
                 sock.sendto(ack_pkt, server_addr) # Sending ACK packet
-                print(f'ACK packet is sent')
+                print(f'ACK packet is sent') # TO-DO: WRITE ABOUT SERVE LOSING THIS ACK
                 print('Connection established')
 
                 return window                 
@@ -73,13 +70,12 @@ def handshake_client(sock: socket, server_addr: tuple, rcv_window: int, timeout:
     start_seq : Sequence number to assign to the first DATA packet.
     rcv_window : Peer-advertised receive window.
     filename : Path to the file whose contents will be transmitted.
-    timeout : Retransmission timeout for outstanding DATA packets.
     
     Returns
     -------
     final_seq_no : last byte sent and acknowledged.
 """
-def send_data(sock: socket , server_addr: tuple, start_seq: int, rcv_window: int, filename: str, timeout: float=0.4):
+def send_data(sock: socket , server_addr: tuple, start_seq: int, rcv_window: int, filename: str):
     
     print('\nData Transfer:\n')
     payloads = []
@@ -95,8 +91,6 @@ def send_data(sock: socket , server_addr: tuple, start_seq: int, rcv_window: int
     base = start_seq # seq of the earliest un-ACKed packet
     next_pkt = start_seq # seq to be assigned to the next DATA packet
     outstanding = {}
-
-    sock.settimeout(timeout) # Set timeout
 
     # Helper output to terminal
     def window_output(): 
@@ -150,7 +144,6 @@ def send_data(sock: socket , server_addr: tuple, start_seq: int, rcv_window: int
     sock : UDP socket already bound to a local port.
     server_addr : (ip, port) tuple of the server.
     seq : Sequence number to place in the FIN segment.
-    timeout : Seconds to wait for a FIN-ACK before retransmitting.
     max_retry : Maximum number of FIN retransmissions before aborting.
 
     Raises
@@ -159,14 +152,12 @@ def send_data(sock: socket , server_addr: tuple, start_seq: int, rcv_window: int
         If no valid FIN-ACK is received within max_retry attempts.
     
 """
-def teardown_client(sock: socket, server_addr: tuple, seq: int, timeout: float=0.4, max_retry: int=5):
+def teardown_client(sock: socket, server_addr: tuple, seq: int, max_retry: int=5):
 
     print('\nConnection Teardown:\n')
 
     fin_pkt = make_packet(seq, 0, FLAG_FIN, 0) # Client initiated FIN
     retries = 0
-
-    sock.settimeout(timeout)
 
     while retries < max_retry:
         sock.sendto(fin_pkt, server_addr)
@@ -210,14 +201,14 @@ def teardown_client(sock: socket, server_addr: tuple, seq: int, timeout: float=0
         The function terminates when the connection is cleanly torn down.
         It does not return a value.
 """
-def client(ip, port, filename, window):
+def client(ip: str, port: int, filename: str, window: int):
 
     sock = socket(AF_INET, SOCK_DGRAM)
 
     server_addr = ((ip, port)) # Makes the server address
     # Binds the socket ot the local port so the OS chooses on for us. And ip as well.
     sock.bind(('', 0))
-    # A short default timeout makes the helper routines more responsive.
+    # Setting timeout for the client 
     sock.settimeout(0.4)  
     try:
         start_seq = 1

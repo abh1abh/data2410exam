@@ -45,7 +45,7 @@ def handshake_server(sock: socket, rcv_window: int=15, timeout: float=0.4, max_r
                 data, addr = sock.recvfrom(HEADER_LEN) # Receive packet from client 
             except sock_timeout: # If no packet is recieved from client we resend the SYN-ACK
                 retries += 1
-                print('Server timeout: resend SYN-ACK')
+                print('Timeout - resend SYN-ACK')
                 continue # Resend SYN-ACK by doing continue
             
             # If the address from the received packet is not the client address from the first packet we try again.

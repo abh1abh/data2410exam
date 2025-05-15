@@ -31,7 +31,7 @@ def handshake_client(sock: socket, server_addr: tuple, rcv_window: int, max_retr
             data, _ = sock.recvfrom(HEADER_LEN)   # receives header. Blocks timeout
         except sock_timeout:                      # Socket_timeout error 
             retries += 1
-            print('Timeout -> retransmit SYN')
+            print('Timeout: retransmit SYN')
             continue                              # Go back and resend
 
         if len(data) != HEADER_LEN: # Checks header lenght
@@ -109,10 +109,10 @@ def send_data(sock: socket , server_addr: tuple, start_seq: int, rcv_window: int
 
         try: #  Wait for an ACK 
             header, _ = sock.recvfrom(HEADER_LEN)
-        except sock_timeout: # The timer has expired
+        except sock_timeout: # The timer has expired. Go-Back-N
             log('RTO occured')
             for pkt_id, pkt in outstanding.items(): 
-                sock.sendto(pkt, server_addr) # Resend packet 
+                sock.sendto(pkt, server_addr) # Resend all packets that we have in our sliding window.  
                 log(f'retransmitting packet with seq={pkt_id} is resent, sliding window = {window_output()}')
             continue
 
@@ -177,6 +177,7 @@ def teardown_client(sock: socket, server_addr: tuple, seq: int, max_retry: int=5
             print(f'FIN-ACK packet is received seq={s_seq} ack={s_ack}')
             print('Connection closes')
             return
+    
     # If we fall through the loop, the server never acknowledged our FIN
     raise RuntimeError('Teardown failed: FIN not acknowledged')
 

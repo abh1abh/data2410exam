@@ -4,7 +4,11 @@ from drtp import *
 """
     Description
     -----------
-    Performs the client side of the three‑way handshake.
+    Performs the client side of a three-way handshake over UDP.
+
+    The client sends a SYN packet to the server, waits for a SYN-ACK response,
+    and replies with an ACK to establish the connection. If no SYN-ACK is 
+    received, it retries up to a specified number of times before failing.
 
     Parameters
     ----------
@@ -59,9 +63,11 @@ def handshake_client(sock: socket, server_addr: tuple, rcv_window: int, max_retr
     Description
     -----------
     Send data to server using Go-Back-N over UDP.
-    Up to window DATA packets can be outstanding. On timeout, the sender
-    retransmits the entire set of unacknowledged packets. The call returns the 
-    first unused sequence number once every byte has been acknowledged.
+
+    At most rcv_window packets can be unacknowledged (in-flight) at a time.  
+    If a timeout occurs before acknowledgments are received, all unacknowledged 
+    packets in the current window are retransmitted. The function returns the 
+    first unused sequence number after the entire file has been acknowledged.
 
     Parameters
     ----------
@@ -134,10 +140,12 @@ def send_data(sock: socket , server_addr: tuple, start_seq: int, rcv_window: int
 """
     Description
     -----------
-    Terminate the connection by performing a FIN / FIN-ACK exchange.
-    The client transmits a FIN carrying seq, waits for the server’s FIN-ACK, 
-    and retries the FIN on timeout.  If the FIN is not acknowledged after 
-    max_retry attempts, a RuntimeError is raised.
+    Terminates the connection by performing a FIN / FIN-ACK exchange.
+
+    The client sends a FIN segment with the given sequence number and waits for 
+    a FIN-ACK from the server. If no valid FIN-ACK is received, the FIN is 
+    resent. After `max_retry` unsuccessful attempts, the function raises 
+    a RuntimeError.
 
     Parameters
     ----------
@@ -185,9 +193,10 @@ def teardown_client(sock: socket, server_addr: tuple, seq: int, max_retry: int=5
 """
     Description
     -----------
-    Upload a file to a UDP server in three phases: handshake, data, teardown).
-    It just opens a socket, calls the three helper functions that implement the protocol, 
-    and converts any `RuntimeError` they raise into a console message.
+    Uploads a file to a UDP server in three phases: handshake, data transfer, and teardown.
+
+    This function creates a UDP socket, executes the three phases using helper functions, and 
+    handles any `RuntimeError` raised during the process by printing an error message to the console.
 
     Parameters
     ----------

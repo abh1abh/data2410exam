@@ -4,13 +4,16 @@ from socket import socket, AF_INET, SOCK_DGRAM, timeout as sock_timeout
 """
     Description
     -----------
-    Perform the server side of a UDP three-way handshake.
+    Handles the server side of a three-way handshake over UDP.
+
+    The server waits for a SYN packet from a client, responds with a SYN-ACK,
+    and waits for an ACK to complete the handshake. If the ACK is not received,
+    the server will resend the SYN-ACK up to a maximum number of retries.
 
     Parameters
     ----------
     sock : Bound UDP socket used for the session.
     rcv_window : Server-advertised receive window (packets).
-    timeout : Seconds to wait for the client’s ACK before retransmitting SYN-ACK.
     max_retry : Maximum SYN ACK retransmissions before giving up.
 
     Returns
@@ -18,7 +21,7 @@ from socket import socket, AF_INET, SOCK_DGRAM, timeout as sock_timeout
     client_addr : Address of the client that successfully completed the handshake.
     agreed_wnd : Flow-control window agreed on.
 """
-def handshake_server(sock: socket, rcv_window: int=15, timeout: float=0.4, max_retry: int=5):
+def handshake_server(sock: socket, rcv_window: int=15, max_retry: int=5):
     while True:
         # Here we receive the packet and check if its only the length of header. 
         data, client_addr = sock.recvfrom(HEADER_LEN)
@@ -36,7 +39,7 @@ def handshake_server(sock: socket, rcv_window: int=15, timeout: float=0.4, max_r
         # Makes a packet with a SYN ACK flag with our standard receiving window
         synack_pkt = make_packet(0, 0 , FLAG_SYN | FLAG_ACK, rcv_window)
         
-        sock.settimeout(timeout) # Sets timeout for if we dont receive an ACK
+        sock.settimeout(0.4) # Sets timeout for if we dont receive an ACK
         retries = 0
         while retries < max_retry:
             sock.sendto(synack_pkt, client_addr) # Send SYN-ACK packet
@@ -70,10 +73,10 @@ def handshake_server(sock: socket, rcv_window: int=15, timeout: float=0.4, max_r
     Receive a contiguous sequence of packets from client and write their
     payloads to outfile.
 
-    The routine implements Go-Back-N. The transfer terminates cleanly when a packet 
+    The routine implements Go-Back-N. The transfer stops when a packet 
     carrying the FIN flag is received, at which point the server replies with FIN-ACK
     and closes the connection. At the end of a successful session the function prints 
-    the measured throughput in Mbps (megabits per second).
+    the measured throughput in Mbps.
 
     Parameters
     ----------
@@ -81,7 +84,7 @@ def handshake_server(sock: socket, rcv_window: int=15, timeout: float=0.4, max_r
     client_addr : IP/port tuple identifying the client accepted by the handshake.
     start_pkt : Sequence number expected for the first data packet.
     rcv_window : Size of the advertised receive window (in packets).
-    discard_seq : ptional sequence number to intentionally lose once per session.
+    discard_seq : Optional sequence number to intentionally lose once per session.
     outfile : File path where incoming payload bytes are written.
 
     Returns
@@ -151,7 +154,7 @@ def receive(sock: socket, client_addr: tuple, start_pkt: int, rcv_window: int, d
 """
     Description
     -----------
-    Run a single–file UDP transfer service. The function binds a UDP socket to the 
+    Run a single-file UDP transfer service. The function binds a UDP socket to the 
     given ip-address and port, accepts exactly one client via a three-way handshake, 
     receives the file using the Go-Back-N protocol, and then terminates.
 

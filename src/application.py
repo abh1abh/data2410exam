@@ -18,8 +18,13 @@ from client import client
 """
 def main ():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-s", "--server", action="store_true", help="Run as server")
-    parser.add_argument("-c", "--client", action="store_true", help="Run as client")
+
+    # Add a mutually exclusive group for server and client
+    # This makes them mutually exclusive
+    group = parser.add_mutually_exclusive_group(required=True)
+    group.add_argument("-s", "--server", action="store_true", help="Run as server")
+    group.add_argument("-c", "--client", action="store_true", help="Run as client")
+
     parser.add_argument("-i", "--ip", required=True, help="IP")
     parser.add_argument("-p", "--port", required=True, type=int, help="Port", default=8080)
     parser.add_argument("-f", "--file", help="File")
@@ -28,20 +33,17 @@ def main ():
 
     args = parser.parse_args()
 
-    if(args.port and (args.port < 1024 or args.port > 65535 )): # Checking if ports is valid 
-        raise SystemExit("Invalid port number. Must be between [1024, 65535]")
+    if args.port < 1024 or args.port > 65535:
+        raise SystemExit("Invalid port number. Must be between 1024 and 65535")
 
     if args.client:
         if args.file is None:
             raise SystemExit("Client mode requires --file to be specified")
         client(args.ip, args.port, args.file, args.window)
-    elif (args.server):
+    else:  # args.server must be True
         server(args.ip, args.port, args.discard)
-    else:
-        raise SystemExit("Not server or client")
     
 if __name__ == "__main__":
     main()
 
 
-    

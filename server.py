@@ -28,13 +28,13 @@ def handshake_server(sock: socket, rcv_window: int=15, timeout: float=0.4, max_r
         _, _, c_flags, _ = parse_header(data) # Parses packet header
 
         # Ignore anything that is not a bare SYN
-        if not (c_flags & FLAG_SYN) or (c_flags & FLAG_ACK):
+        if not (c_flags & FLAG_SYN) or (c_flags & FLAG_ACK): # Used AI for this IF-test
             continue          # stay in the loop and wait for a real SYN
         
         print(f'SYN packet is received seq')
 
         # Makes a packet with a SYN ACK flag with our standard receiving window
-        synack_pkt  = make_packet(0, 0 , FLAG_SYN | FLAG_ACK, rcv_window)
+        synack_pkt = make_packet(0, 0 , FLAG_SYN | FLAG_ACK, rcv_window)
         
         sock.settimeout(timeout) # Sets timeout for if we dont receive an ACK
         retries = 0
@@ -53,8 +53,8 @@ def handshake_server(sock: socket, rcv_window: int=15, timeout: float=0.4, max_r
                 continue
 
             _, _, c_flags2, c_wnd = parse_header(data) # Parse packet
-            wanted_flags = FLAG_ACK  # The flag we want
-            if(c_flags2 & wanted_flags) == wanted_flags: # Checks if the packet as the flag
+            wanted_flags = FLAG_ACK  # The flag we want 
+            if(c_flags2 & wanted_flags) == wanted_flags: # Checks if the packet as the flag (used AI for this IF-test)
                 print(f'ACK packet is received')  # Restore blocking mode
                 sock.settimeout(None) # Flow-control safety        
                 agreed_wnd = min(rcv_window, c_wnd)   
@@ -96,7 +96,7 @@ def receive(sock: socket, client_addr: tuple, start_pkt: int, rcv_window: int, d
     to_discard = discard_seq 
     total_bytes = 0
     
-    t = timestamp() # Timer for throughput calculation 
+    t_start = timestamp() # Timer for throughput calculation 
 
     # Opens outfile with 'with open' to ensure that the file descriptor closes
     with open(outfile, 'wb') as out:
@@ -139,10 +139,10 @@ def receive(sock: socket, client_addr: tuple, start_pkt: int, rcv_window: int, d
                 log(f'Out-of-order packet {seq} is received (expected {expected})')
                 continue # Drops packet and wait for the correct one
         # Throughput calcuation
-        if t is not None and total_bytes:
-            end = timestamp()
+        if t_start is not None and total_bytes:
+            t_end = timestamp()
             # To calcuated the total time it took to recieve all the packets
-            duration_seconds = (end - t).total_seconds() 
+            duration_seconds = (t_end - t_start).total_seconds() 
             throughput_mbps = (total_bytes * 8) / (1e6 * duration_seconds)
             print(f'The throughput is {throughput_mbps:.2f} Mbps')
         print('Connection Closes')

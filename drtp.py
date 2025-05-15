@@ -41,7 +41,7 @@ def make_packet(seq: int, ack: int, flags: int, window: int, data=b''):
     return build_header(seq, ack, flags, window) + data
 
 # Return the current local time once
-def timestamp():
+def timestamp():   
     return datetime.now()
 
 # Print message with a wall-clock timestamp down to microseconds.

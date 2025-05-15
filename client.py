@@ -41,12 +41,12 @@ def handshake_client(sock: socket, server_addr: tuple, rcv_window: int, max_retr
         _, s_ack, s_flags, s_window = parse_header(data) # Parsing header
         
         wanted_flags = FLAG_SYN | FLAG_ACK 
-        if (s_flags & wanted_flags) == wanted_flags and s_ack == 0: # Checking if header has SYN-ACK
+        if (s_flags & wanted_flags) == wanted_flags and s_ack == 0: # Checking if header has SYN-ACK (used AI for this IF-test)
                 print(f'SYN-ACK packet is received')
                 window = min(rcv_window, s_window) # Selecting the flow-controll window
                 ack_pkt = make_packet(0, 0, FLAG_ACK, window) # Making ACK packet
                 sock.sendto(ack_pkt, server_addr) # Sending ACK packet
-                print(f'ACK packet is sent') # TO-DO: WRITE ABOUT SERVE LOSING THIS ACK
+                print(f'ACK packet is sent') # This packet can be lost, but the server as a timeout set for this. 
                 print('Connection established')
 
                 return window                 
@@ -103,7 +103,7 @@ def send_data(sock: socket , server_addr: tuple, start_seq: int, rcv_window: int
         while next_pkt < base + rcv_window and next_pkt - start_seq < len(payloads):
             pkt_bytes = make_packet(next_pkt, 0, 0, rcv_window, payloads[next_pkt-start_seq]) # Make packet
             sock.sendto(pkt_bytes, server_addr) # Send packet
-            outstanding[next_pkt] = pkt_bytes 
+            outstanding[next_pkt] = pkt_bytes # Adding pakcet dict for packets 
             log(f"packet with seq = {next_pkt} is sent, sliding window = {window_output()}")
             next_pkt += 1
 
@@ -117,7 +117,7 @@ def send_data(sock: socket , server_addr: tuple, start_seq: int, rcv_window: int
             continue
 
         _, ack, flags, _ = parse_header(header) # Parse header
-        if not (flags & FLAG_ACK):
+        if not (flags & FLAG_ACK): 
             continue
 
         if ack in outstanding: 
@@ -173,7 +173,7 @@ def teardown_client(sock: socket, server_addr: tuple, seq: int, max_retry: int=5
         wanted = FLAG_ACK | FLAG_FIN  # Expect FIN-ACK
 
         # Accept only a FIN-ACK whose ack matches our FIN’s seq
-        if(s_flags & wanted) == wanted and s_ack == seq: 
+        if(s_flags & wanted) == wanted and s_ack == seq: # (used AI for this IF-test)
             print(f'FIN-ACK packet is received seq={s_seq} ack={s_ack}')
             print('Connection closes')
             return
@@ -203,20 +203,20 @@ def teardown_client(sock: socket, server_addr: tuple, seq: int, max_retry: int=5
 """
 def client(ip: str, port: int, filename: str, window: int):
 
-    sock = socket(AF_INET, SOCK_DGRAM)
+    with socket(AF_INET, SOCK_DGRAM) as sock:
 
-    server_addr = ((ip, port)) # Makes the server address
-    # Binds the socket ot the local port so the OS chooses on for us. And ip as well.
-    sock.bind(('', 0))
-    # Setting timeout for the client 
-    sock.settimeout(0.4)  
-    try:
-        start_seq = 1
-        agreed_window = handshake_client(sock, server_addr, window) # Three-way handshake 
-        final_seq = send_data(sock, server_addr, start_seq, agreed_window, filename) # File transfer 
-        teardown_client(sock, server_addr, final_seq) # Connection teardown
-    except RuntimeError as e:
-        # Any of the helper routines may raise RuntimeError on failure.
-        print('Client', e)
+        server_addr = ((ip, port)) # Makes the server address
+        # Binds the socket ot the local port so the OS chooses on for us. And ip as well.
+        sock.bind(('', 0))
+        # Setting timeout for the client 
+        sock.settimeout(0.4)  
+        try:
+            start_seq = 1
+            agreed_window = handshake_client(sock, server_addr, window) # Three-way handshake 
+            final_seq = send_data(sock, server_addr, start_seq, agreed_window, filename) # File transfer 
+            teardown_client(sock, server_addr, final_seq) # Connection teardown
+        except RuntimeError as e:
+            # Any of the helper routines may raise RuntimeError on failure.
+            print('Client', e)
 
-    return 
+        return

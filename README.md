@@ -1,7 +1,7 @@
 # DATA2410 Reliable Transport Protocol – File Transfer Application
 
 This repository contains **`application.py`**, a reference implementation of a simple, reliable file–transfer utility that runs **on top of UDP**.<br>
-It demonstrates a three‑phase protocol—_connection establishment_, _data transfer_ with a sliding window, and _connection teardown_ - referred to here as **DRTP (DATA2410 Reliable Transport Protocol)**.
+It demonstrates a three‑phase protocol - _connection establishment_, _data transfer_ with a sliding window, and _connection teardown_ - referred to here as **DRTP (DATA2410 Reliable Transport Protocol)**.
 
 ---
 

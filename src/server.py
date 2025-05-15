@@ -12,7 +12,7 @@ from socket import socket, AF_INET, SOCK_DGRAM, timeout as sock_timeout
 
     Parameters
     ----------
-    sock : Bound UDP socket used for the session.
+    sock : Bound UDP socket.
     rcv_window : Server-advertised receive window (packets).
     max_retry : Maximum SYN ACK retransmissions before giving up.
 
@@ -80,7 +80,7 @@ def handshake_server(sock: socket, rcv_window: int=15, max_retry: int=5):
 
     Parameters
     ----------
-    sock : UDP socket already bound by the caller.
+    sock : Bound UDP socket.
     client_addr : IP/port tuple identifying the client accepted by the handshake.
     start_pkt : Sequence number expected for the first data packet.
     rcv_window : Size of the advertised receive window (in packets).

@@ -12,7 +12,7 @@ from drtp import *
 
     Parameters
     ----------
-    sock : Bound UDP socket used for the session.
+    sock : Bound UDP socket.
     server_addr : (ip, port) tuple of the server.
     rcv_window : Client-advertised receive window (packets).
     max_retry : Maximum SYN-ACK retransmissions before giving up.
@@ -71,7 +71,7 @@ def handshake_client(sock: socket, server_addr: tuple, rcv_window: int, max_retr
 
     Parameters
     ----------
-    sock : UDP socket already bound to a local port.
+    sock : Bound UDP socket.
     server_addr : (ip, port)  tuple of the server.
     start_seq : Sequence number to assign to the first DATA packet.
     rcv_window : Peer-advertised receive window.
@@ -140,7 +140,7 @@ def send_data(sock: socket , server_addr: tuple, start_seq: int, rcv_window: int
 """
     Description
     -----------
-    Terminates the connection by performing a FIN / FIN-ACK exchange.
+    Connection teardown by performing a FIN / FIN-ACK exchange.
 
     The client sends a FIN segment with the given sequence number and waits for 
     a FIN-ACK from the server. If no valid FIN-ACK is received, the FIN is 
@@ -149,7 +149,7 @@ def send_data(sock: socket , server_addr: tuple, start_seq: int, rcv_window: int
 
     Parameters
     ----------
-    sock : UDP socket already bound to a local port.
+    sock : Bound UDP socket.
     server_addr : (ip, port) tuple of the server.
     seq : Sequence number to place in the FIN segment.
     max_retry : Maximum number of FIN retransmissions before aborting.

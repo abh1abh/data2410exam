@@ -172,9 +172,9 @@ def teardown_client(sock: socket, server_addr: tuple, seq: int, max_retry: int=5
         print(f'FIN packet packet is sent {seq}')
         try:
             header, _ = sock.recvfrom(HEADER_LEN) # Waiting on FIN-ACK
-        except sock_timeout:
+        except sock_timeout: # Timeout - the timer has expired. 
             retries += 1
-            print('Timeout - resend FIN')
+            print('Timeout - resend FIN') # Resends FIN packet
             continue
         
         s_seq, s_ack, s_flags, _ = parse_header(header)

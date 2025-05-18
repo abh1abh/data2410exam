@@ -19,7 +19,7 @@ from socket import socket, AF_INET, SOCK_DGRAM, timeout as sock_timeout
     Returns
     -------
     client_addr : Address of the client that successfully completed the handshake.
-    agreed_wnd : Flow-control window agreed on.
+    agreed_wnd : Advertised window agreed on.
 """
 def handshake_server(sock: socket, rcv_window: int=15, max_retry: int=5):
     while True:
@@ -59,7 +59,7 @@ def handshake_server(sock: socket, rcv_window: int=15, max_retry: int=5):
             wanted_flags = FLAG_ACK  # The flag we want 
             if(c_flags2 & wanted_flags) == wanted_flags: # Checks if the packet as the flag (used AI for this IF-test)
                 print(f'ACK packet is received')  # Restore blocking mode
-                sock.settimeout(None) # Flow-control safety        
+                sock.settimeout(None) # Remove timer       
                 agreed_wnd = min(rcv_window, c_wnd)   
                 print('Connection established')
                 return client_addr, agreed_wnd

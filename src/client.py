@@ -19,7 +19,7 @@ from drtp import *
 
     Returns
     -------
-    window : Flow-control window agreed on.
+    window : Advertised window agreed on.
 """
 def handshake_client(sock: socket, server_addr: tuple, rcv_window: int, max_retry: int=5):
     print('Connection Establishment Phase:\n')
@@ -47,7 +47,7 @@ def handshake_client(sock: socket, server_addr: tuple, rcv_window: int, max_retr
         wanted_flags = FLAG_SYN | FLAG_ACK 
         if (s_flags & wanted_flags) == wanted_flags and s_ack == 0: # Checking if header has SYN-ACK (used AI for this IF-test)
                 print(f'SYN-ACK packet is received')
-                window = min(rcv_window, s_window) # Selecting the flow-controll window
+                window = min(rcv_window, s_window) # Selecting the adveristed window
                 ack_pkt = make_packet(0, 0, FLAG_ACK, window) # Making ACK packet
                 sock.sendto(ack_pkt, server_addr) # Sending ACK packet
                 print(f'ACK packet is sent') # This packet can be lost, but the server as a timeout set for this. 
